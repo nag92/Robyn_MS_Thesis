@@ -1,21 +1,18 @@
 ---
-  title: "Robyn Thesis Moderated Mediation Analysis"
+title: "Robyn Thesis Moderated Mediation Analysis"
 author: "Robyn Himelstein & Zack Williams"
 date: "2023-01-23"
 output: html_document
 ---
-  
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-
 source("rogme_extra.R") # Note you need to change the path to wherever these scripts are on your machine
 source("FA.functions.R") # Note you need to change the path to wherever these scripts are on your machine
 source("irt_extra.R") # Note you need to change the path to wherever these scripts are on your machine
 source("BayesianTools.R") # Note you need to change the path to wherever these scripts are on your machine
 
 pacman::p_load(flexplot,tidyverse)
-
 
 df <- readRDS("LPDW_Data_AllWaves_Clean_Final.RDS")
 # Appropriately imputing zeroes in remaining ODSIS items if item 1 is a zero
@@ -87,8 +84,8 @@ solo.bf@Cache$ModelSyntax
 
 solo_mirt_w1 <- bfactor(solo_items_w1[,-c(2,6,7)],c(1,1,1,2,2,1,1,2,1,2))
 C2(solo_mirt_w1)
-#     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 40.642      25.000       0.025       0.046       0.016       0.070       0.041       0.990       0.994 
+     #     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+     # 40.642      25.000       0.025       0.046       0.016       0.070       0.041       0.990       0.994 
 
 solo_scores <- fscores(solo_mirt_w1,QMC=T,response.pattern = solo_items[,-c(2,6,7)])
 
@@ -122,8 +119,8 @@ acips.bf@Cache$ModelSyntax
 
 acips_mirt <- bfactor(acips_items[,-c(3,5,9)],c(1,1,1,rep(NA,6),1,NA,NA,1,NA))
 C2(acips_mirt)
-#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 123.626      72.000       0.000       0.049       0.034       0.063       0.039       0.988       0.990 
+    #      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+    # 123.626      72.000       0.000       0.049       0.034       0.063       0.039       0.988       0.990 
 acips_scores <- fscores(acips_mirt)
 
 dep_items <- df1[,grep("^phq9r_q.*_w3$|^odsis_.*_w3$",names(df1))]
@@ -213,8 +210,8 @@ names(social_items)
 
 nfactor.EGA(social_items)
 
-# promis_dsa_q5_w1|promis_dsa_q6_w1 promis_emosup_q1_w1|promis_emosup_q2_w1 promis_emosup_q2_w1|promis_emosup_q4_w1 promis_emosup_q3_w1|promis_emosup_q4_w1 
-#                             0.452                                   0.431                                   0.305                                   0.302 
+      # promis_dsa_q5_w1|promis_dsa_q6_w1 promis_emosup_q1_w1|promis_emosup_q2_w1 promis_emosup_q2_w1|promis_emosup_q4_w1 promis_emosup_q3_w1|promis_emosup_q4_w1 
+      #                             0.452                                   0.431                                   0.305                                   0.302 
 
 social.bf <- CFA.bf(social_items,c(NA,rep(1,5),rep(2,4),rep(3,5)),more = '
                     promis_dsa_q5_w1 ~~ promis_dsa_q6_w1
@@ -254,8 +251,8 @@ nfactor.EGA(solo_items)
 ### SOLO (Loneliness)
 solo_bf_mirt <- bfactor(solo_items,c(1,2,1,1,2,1,1,2,1,1,2,1,2))
 C2(solo_bf_mirt)
-#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 116.208      52.000       0.000       0.064       0.048       0.079       0.051       0.979       0.986 
+    #      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+    # 116.208      52.000       0.000       0.064       0.048       0.079       0.051       0.979       0.986 
 residCheck(solo_bf_mirt)
 # solo_q2r_happyconnectedness_w1|solo_q7_wishwithothers_w1       solo_q4_lonwithothers_w1|solo_q5r_satnumfriends_w1               solo_q6_leftout_w1|solo_q11r_satinclude_w1 
 #                                                   -0.134                                                   -0.100                                                    0.100 
@@ -274,8 +271,8 @@ LD.Q3.boot(solo_bf_mirt)
 
 solo_bf_mirt <- bfactor(solo_items[,-c(6,7)],c(1,2,1,1,2,2,1,1,2,1,2))
 C2(solo_bf_mirt)
-#     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 53.445      33.000       0.014       0.045       0.021       0.067       0.044       0.990       0.994 
+     #     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+     # 53.445      33.000       0.014       0.045       0.021       0.067       0.044       0.990       0.994 
 residCheck(solo_bf_mirt) # Good
 LD.Q3.boot(solo_bf_mirt) # Good
 
@@ -332,8 +329,8 @@ nfactor.EGA(acips_items,uni.method="expand") # Essentialy unidimensional
 
 acips_mirt <- mirt(acips_items,1)
 C2(acips_mirt) # Fit is pretty good too (SRMR a little high but OK)
-#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 305.297     119.000       0.000       0.072       0.062       0.082       0.055       0.970       0.974 
+    #      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+    # 305.297     119.000       0.000       0.072       0.062       0.082       0.055       0.970       0.974 
 
 residCheck(acips_mirt)
 # $Large.Resids
@@ -353,8 +350,8 @@ LD.Q3.boot(acips_mirt) # Cutoff 0.203
 
 acips_mirt <- mirt(acips_items[,-c(3,5,9)],1)
 C2(acips_mirt)
-#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
-# 170.484      77.000       0.000       0.063       0.050       0.076       0.047       0.979       0.983 
+    #      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+    # 170.484      77.000       0.000       0.063       0.050       0.076       0.047       0.979       0.983 
 residCheck(acips_mirt) # No more large resids
 LD.Q3.boot(acips_mirt) # None
 
@@ -413,6 +410,7 @@ calcOmega(dep_bifactor,bifactor = T)
 Model: Social Access [T1] -> Loneliness [T2] - > Depression [T3] [with paths moderated by social motivation @ T1]
 
 ```{r}
+install_cmdstan()
 # Full Moderated Mediation Model (All 3 Paths Moderated)
 bf_modmed_full <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
@@ -422,13 +420,13 @@ prior_modmed <- c(brms::prior(normal(0,1), class = b),brms::prior(exponential(1)
 
 # Full Model
 brm_socacc_depress_modmed_full <- brm_mi(bf_modmed_full,
-                                         data=df_reduced_imp,
-                                         prior= prior_modmed,
-                                         cores=10,
-                                         chains=10,
-                                         seed=123,sample_prior = T,
-                                         iter=5000,warmup=1000,
-                                         file = "brm_socacc_depress_modmed_full.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_full.RDS")
 
 
 # Partial Moderated Mediation Model (Only X -> M Path Moderated)
@@ -436,13 +434,13 @@ bf_modmed_XM <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=stud
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # XM Model
 brm_socacc_depress_modmed_XM <- brm_mi(bf_modmed_XM,
-                                       data=df_reduced_imp,
-                                       prior= prior_modmed,
-                                       cores=10,
-                                       chains=10,
-                                       seed=123,sample_prior = T,
-                                       iter=5000,warmup=1000,
-                                       file = "brm_socacc_depress_modmed_XM.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_XM.RDS")
 
 
 # Partial Moderated Mediation Model (Only M -> Y Path Moderated)
@@ -450,39 +448,39 @@ bf_modmed_MY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=stud
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # MY Model
 brm_socacc_depress_modmed_MY <- brm_mi(bf_modmed_MY,
-                                       data=df_reduced_imp,
-                                       prior= prior_modmed,
-                                       cores=10,
-                                       chains=10,
-                                       seed=123,sample_prior = T,
-                                       iter=5000,warmup=1000,
-                                       file = "brm_socacc_depress_modmed_MY.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_MY.RDS")
 
 # Partial Moderated Mediation Model (Only X -> Y Path Moderated)
 bf_modmed_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # XY Model
 brm_socacc_depress_modmed_XY <- brm_mi(bf_modmed_XY,
-                                       data=df_reduced_imp,
-                                       prior= prior_modmed,
-                                       cores=10,
-                                       chains=10,
-                                       seed=123,sample_prior = T,
-                                       iter=5000,warmup=1000,
-                                       file = "brm_socacc_depress_modmed_XY.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_XY.RDS")
 
 # Partial Moderated Mediation Model (Only M -> Y  and X -> Y Paths Moderated)
 bf_modmed_MY_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # MY/XY Model
 brm_socacc_depress_modmed_MY_XY <- brm_mi(bf_modmed_MY_XY,
-                                          data=df_reduced_imp,
-                                          prior= prior_modmed,
-                                          cores=10,
-                                          chains=10,
-                                          seed=123,sample_prior = T,
-                                          iter=5000,warmup=1000,
-                                          file = "brm_socacc_depress_modmed_MY_XY.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_MY_XY.RDS")
 
 
 # Partial Moderated Mediation Model (Only X -> M and X -> Y Paths Moderated)
@@ -490,52 +488,52 @@ bf_modmed_XM_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=s
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # XM/XY Model
 brm_socacc_depress_modmed_XM_XY <- brm_mi(bf_modmed_XM_XY,
-                                          data=df_reduced_imp,
-                                          prior= prior_modmed,
-                                          cores=10,
-                                          chains=10,
-                                          seed=123,sample_prior = T,
-                                          iter=5000,warmup=1000,
-                                          file = "brm_socacc_depress_modmed_XM_XY.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_XM_XY.RDS")
 
 # Partial Moderated Mediation Model (Only X -> M and M -> Y Paths Moderated)
 bf_modmed_XM_MY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # XM/MY Model
 brm_socacc_depress_modmed_XM_MY <- brm_mi(bf_modmed_XM_MY,
-                                          data=df_reduced_imp,
-                                          prior= prior_modmed,
-                                          cores=10,
-                                          chains=10,
-                                          seed=123,sample_prior = T,
-                                          iter=5000,warmup=1000,
-                                          file = "brm_socacc_depress_modmed_XM_MY.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_modmed_XM_MY.RDS")
 
 # UNModerated Mediation Model (NO Paths Moderated)
 bf_med_bl <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
 # XM/MY Model
 brm_socacc_depress_med_bl <- brm_mi(bf_med_bl,
-                                    data=df_reduced_imp,
-                                    prior= prior_modmed,
-                                    cores=10,
-                                    chains=10,
-                                    seed=123,sample_prior = T,
-                                    iter=5000,warmup=1000,
-                                    file = "brm_socacc_depress_med_bl.RDS")
+                           data=df_reduced_imp,
+                           prior= prior_modmed,
+                           cores=10,
+                           chains=10,
+                           seed=123,sample_prior = T,
+                           iter=5000,warmup=1000,
+                           file = "brm_socacc_depress_med_bl.RDS")
 ```
 
 ## Part 2: Model Selection
 
 ```{r}
 modlist <- list("None"=brm_socacc_depress_med_bl,
-                "XM_MY_XY"=brm_socacc_depress_modmed_full,
-                "MY_XY"=brm_socacc_depress_modmed_MY_XY,
-                "XM_XY"=brm_socacc_depress_modmed_XM_XY,
-                "XM_MY"=brm_socacc_depress_modmed_XM_MY,
-                "XY"=brm_socacc_depress_modmed_XY,
-                "XM"=brm_socacc_depress_modmed_XM,
-                "MY"=brm_socacc_depress_modmed_MY)
+     "XM_MY_XY"=brm_socacc_depress_modmed_full,
+     "MY_XY"=brm_socacc_depress_modmed_MY_XY,
+     "XM_XY"=brm_socacc_depress_modmed_XM_XY,
+     "XM_MY"=brm_socacc_depress_modmed_XM_MY,
+     "XY"=brm_socacc_depress_modmed_XY,
+     "XM"=brm_socacc_depress_modmed_XM,
+     "MY"=brm_socacc_depress_modmed_MY)
 
 bayes_factor_BMA(modlist) # Compare to equal priors [default]
 
@@ -545,7 +543,7 @@ bayes_factor_BMA(modlist, prior_prob = c())
 
 # See example below [Values in there right now are Zack's "informed" priors but feel free to change]
 bayes_factor_BMA(modlist,prior_prob = c(0.25,0.10,0.05,0.05,0.15,0.05,0.30,0.05)) # Alternative "informed" model selection
-```{r}
+```
 
 ## Part 3: Results of "Best-fitting" Model
 
@@ -599,11 +597,11 @@ colnames(post_summary) <- names(post_modmed_final)[4:17]
 post_summary <- data.frame(t(post_summary))
 
 post_summary <- post_summary %>% mutate(across(Mdn:HDI.97.5.,round,3),
-                                        across(c(Pd,P.ROPE,P.ROPE.1),round,4),
-                                        P.Exceeds.ROPE=P.ROPE.1,
-                                        ROPE = glue::glue("[{ROPE.lo},{ROPE.hi}]"),
-                                        BF.0 = format(exp(logBF.10),digits=3),
-                                        BF.ROPE = format(exp(logBF.ROPE),digits=3))
+                        across(c(Pd,P.ROPE,P.ROPE.1),round,4),
+                        P.Exceeds.ROPE=P.ROPE.1,
+                        ROPE = glue::glue("[{ROPE.lo},{ROPE.hi}]"),
+                        BF.0 = format(exp(logBF.10),digits=3),
+                        BF.ROPE = format(exp(logBF.ROPE),digits=3))
 
 post_summary[,c(1:4,14,13,9,12,15)] # Print Results
 ```
@@ -611,6 +609,9 @@ post_summary[,c(1:4,14,13,9,12,15)] # Print Results
 
 ### Additional analyses [TBD...]
 
+```{r}
+
+```
 
 
 
