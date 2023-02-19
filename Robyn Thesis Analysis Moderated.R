@@ -1,0 +1,635 @@
+---
+  title: "Robyn Thesis Moderated Mediation Analysis"
+author: "Robyn Himelstein & Zack Williams"
+date: "2023-01-23"
+output: html_document
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+source("rogme_extra.R") # Note you need to change the path to wherever these scripts are on your machine
+source("FA.functions.R") # Note you need to change the path to wherever these scripts are on your machine
+source("irt_extra.R") # Note you need to change the path to wherever these scripts are on your machine
+source("BayesianTools.R") # Note you need to change the path to wherever these scripts are on your machine
+
+pacman::p_load(flexplot,tidyverse)
+
+
+df <- readRDS("LPDW_Data_AllWaves_Clean_Final.RDS")
+# Appropriately imputing zeroes in remaining ODSIS items if item 1 is a zero
+df[which(df$odsis_q1_frequency_w1==0),grep("odsis_q[2345].*_w1$",names(df))] <- 0
+df[which(df$odsis_q1_frequency_w2==0),grep("odsis_q[2345].*_w2$",names(df))] <- 0
+df[which(df$odsis_q1_frequency_w3==0),grep("odsis_q[2345].*_w3$",names(df))] <- 0
+
+df_reduced <- df[,c("age_years","gender_id","sex_birth","ethnicity_hispanic","race_amerind","race_asian","race_black","race_mideast","race_pacific","race_white","race_other","education","sex_orientation","relationship_status","living_situation","dx_epilepsy","psych_anx","psych_adhd","psych_bipolar","psych_bfrb","psych_bpd","psych_dep","psych_ed","psych_id","psych_ld","psych_ocd","psych_ptsd","psych_scz_psy","psych_sud","psych_ts_ctd","social_frequency","promis_dsa_q2_w1","promis_dsa_q5_w1","promis_dsa_q6_w1","pg10_q5_social_w1","pg10_q6_socialrole_w1","promis_emosup_q1_w1","promis_emosup_q2_w1","promis_emosup_q3_w1","promis_emosup_q4_w1","promis_lonely_q2_w1","promis_lonely_q3_w1","promis_lonely_q4_w1","promis_lonely_q5_w1","promis_lonely_q6_w1","promis_dsa_q2_w2","promis_dsa_q5_w2","promis_dsa_q6_w2","pg10_q5_social_w2","pg10_q6_socialrole_w2","promis_emosup_q1_w2","promis_emosup_q2_w2","promis_emosup_q3_w2","promis_emosup_q4_w2","promis_lonely_q2_w2","promis_lonely_q3_w2","promis_lonely_q4_w2","promis_lonely_q5_w2","promis_lonely_q6_w2","promis_dsa_q2_w3","promis_dsa_q5_w3","promis_dsa_q6_w3","pg10_q5_social_w3","pg10_q6_socialrole_w3","promis_emosup_q1_w3","promis_emosup_q2_w3","promis_emosup_q3_w3","promis_emosup_q4_w3","promis_lonely_q2_w3","promis_lonely_q3_w3","promis_lonely_q4_w3","promis_lonely_q5_w3","promis_lonely_q6_w3",grep("^solo_.*_w[1-3]$",names(df),value = T),grep("^acips_.*_w[1-3]$",names(df),value = T),grep("^phq9r_q.*_w[1-3]$|^odsis_.*_w[1-3]$",names(df),value = T))] %>% mutate(across(matches("^psych_|^dx_|^gender_|^ethnicity_|^race_|^sex_|^relation|^living"),as.factor)) %>%
+  mutate(across(c(education,social_frequency:odsis_q5_social_w3),ordered))
+
+df_reduced_imp <- mi.missForest(df_reduced,m=10,cores = 15,seed = 12345,file="RobynThesisData_Imputed10_02.12.2023.RDS")
+# df_reduced_imp <- lapply(df_reduced_imp,function(X){
+#   # Recode to reverse the "PROMIS Social Isolation" items to be in same direction as other "social access" items
+#   X <- X %>% mutate(across(starts_with("promis_lonely_"),~ reverse(as.numeric(.x),range=c(1,5))))
+# })
+# saveRDS(df_reduced_imp,"RobynThesisData_Imputed10_02.12.2023.RDS")
+df1 <- df_reduced_imp[[1]]
+```
+
+# Measure Calculation
+
+```{r}
+# Note that you can skip this section if you want to go to mediation results
+social_items <- df1[,c("social_frequency","promis_dsa_q2_w1","promis_dsa_q5_w1","promis_dsa_q6_w1","pg10_q5_social_w1","pg10_q6_socialrole_w1","promis_emosup_q1_w1","promis_emosup_q2_w1","promis_emosup_q3_w1","promis_emosup_q4_w1","promis_lonely_q2_w1","promis_lonely_q3_w1","promis_lonely_q4_w1","promis_lonely_q5_w1","promis_lonely_q6_w1")] %>% mutate(across(everything(),as.numeric))
+
+
+social.bf <- CFA.bf(social_items,c(NA,rep(1,5),rep(2,4),rep(3,5)),more = '
+                    promis_dsa_q5_w1 ~~ promis_dsa_q6_w1
+                    promis_emosup_q1_w1 ~~ promis_emosup_q2_w1
+                    ')
+
+social.bf@Cache$ModelSyntax
+# "G =~ social_frequency + promis_dsa_q2_w1 + promis_dsa_q5_w1 + promis_dsa_q6_w1 + pg10_q5_social_w1 + pg10_q6_socialrole_w1 + promis_emosup_q1_w1 + promis_emosup_q2_w1 + promis_emosup_q3_w1 + promis_emosup_q4_w1 + promis_lonely_q2_w1 + promis_lonely_q3_w1 + promis_lonely_q4_w1 + promis_lonely_q5_w1 + promis_lonely_q6_w1\nS1 =~ promis_dsa_q2_w1 + promis_dsa_q5_w1 + promis_dsa_q6_w1 + pg10_q5_social_w1 + pg10_q6_socialrole_w1\nS2 =~ promis_emosup_q1_w1 + promis_emosup_q2_w1 + promis_emosup_q3_w1 + promis_emosup_q4_w1\nS3 =~ promis_lonely_q2_w1 + promis_lonely_q3_w1 + promis_lonely_q4_w1 + promis_lonely_q5_w1 + promis_lonely_q6_w1\n\n                    promis_dsa_q5_w1 ~~ promis_dsa_q6_w1\n                    promis_emosup_q1_w1 ~~ promis_emosup_q2_w1\n                    "
+loads(social.bf)
+sem.fit(social.bf)
+
+loads(social.bf)
+
+social_mirt_bf <- bfactor(social_items,c(NA,rep(1,5),rep(2,4),rep(3,5)))
+C2(social_mirt_bf)
+residCheck(social_mirt_bf)
+
+loads(social_mirt_bf)
+
+
+# SOLO W2
+solo_items <- df1[,grep("^solo_.*_w2$",names(df1))] %>% mutate(across(everything(),as.numeric))
+solo_items_w1 <- df1[,grep("^solo_.*_w1$",names(df1))] %>% mutate(across(everything(),as.numeric))
+
+solo.bf <- CFA.bf(solo_items[,-c(2,6,7)],c(1,1,1,2,2,1,1,2,1,2))
+
+sem.fit(solo.bf) # After removal of item 2, much better fit
+# Fit Measures for solo.bf (DWLS estimation):
+#  Scaled X2(25) = 66.18 P = 1.4e-05
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.977 | 'old' CFI = 0.99
+#   TLI.cMLD = 0.959 | 'old' TLI = 0.982
+#   RMSEA.cMLD = 0.077 (90% CI: 0.057—0.097) | 'old' RMSEA = 0.074 (90% CI: 0.053—0.096)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.022 (90% CI: 0.015—0.029) | 'old' SRMR = 0.027 (90% CI: 0.021—0.032)
+#   uCRMR = 0.025 (90% CI: 0.017—0.033) | 'old' CRMR = 0.029 (90% CI: 0.024—0.035)
+#  uSRMR/R^2 = 0.033 (90% CI: 0.022—0.043)
+#  WRMR = 0.51
+#  |Residuals| > 0.1 = 0%
+#  Largest Residual = -0.065 (solo_q13r_quality_w2|solo_q12_shareinterests_w2)
+
+solo.bf@Cache$ModelSyntax
+# "G =~ solo_q1_genlonely_w2 + solo_q3_wantintimacy_w2 + solo_q4_lonwithothers_w2 + solo_q5r_satnumfriends_w2 + solo_q8r_happyamount_w2 + solo_q9_longforcontact_w2 + solo_q10_seeothers_w2 + solo_q11r_satinclude_w2 + solo_q12_shareinterests_w2 + solo_q13r_quality_w2\nS1 =~ solo_q1_genlonely_w2 + solo_q3_wantintimacy_w2 + solo_q4_lonwithothers_w2 + solo_q9_longforcontact_w2 + solo_q10_seeothers_w2 + solo_q12_shareinterests_w2\nS2 =~ solo_q5r_satnumfriends_w2 + solo_q8r_happyamount_w2 + solo_q11r_satinclude_w2 + solo_q13r_quality_w2\n"
+
+solo_mirt_w1 <- bfactor(solo_items_w1[,-c(2,6,7)],c(1,1,1,2,2,1,1,2,1,2))
+C2(solo_mirt_w1)
+#     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 40.642      25.000       0.025       0.046       0.016       0.070       0.041       0.990       0.994 
+
+solo_scores <- fscores(solo_mirt_w1,QMC=T,response.pattern = solo_items[,-c(2,6,7)])
+
+solo_scores_w1 <- fscores(solo_mirt_w1,QMC=T)
+
+
+acips_items <- df[,grep("^acips_.*_w1$",names(df))]
+acips.1f <- CFA.1f(acips_items[,-c(3,5,9)])
+sem.fit(acips.1f) # Fit a little lower than we want
+sem.misspec(acips.1f)$Covariances.pow # Add items 1, 2, 4, 13, 16 to a specific factor based on residual covariance pattern
+
+acips.bf <- CFA.bf(acips_items[,-c(3,5,9)],c(1,1,1,rep(NA,6),1,NA,NA,1,NA))
+sem.fit(acips.bf) # Looks a lot better now
+# Fit Measures for acips.bf (DWLS estimation):
+#  Scaled X2(72) = 131.45 P = 2.39e-05
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.956 | 'old' CFI = 0.987
+#   TLI.cMLD = 0.945 | 'old' TLI = 0.984
+#   RMSEA.cMLD = 0.07 (90% CI: 0.055—0.086) | 'old' RMSEA = 0.052 (90% CI: 0.038—0.066)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.026 (90% CI: 0.019—0.034) | 'old' SRMR = 0.037 (90% CI: 0.032—0.042)
+#   uCRMR = 0.028 (90% CI: 0.02—0.036) | 'old' CRMR = 0.04 (90% CI: 0.035—0.045)
+#  uSRMR/R^2 = 0.048 (90% CI: 0.035—0.062)
+#  WRMR = 0.641
+#  |Residuals| > 0.1 = 1.1%
+#  Largest Residual = 0.106 (acips_q16_talkline_w1|acips_q7_sharenews_w1)
+sem.misspec(acips.bf)$Covariances.pow
+
+acips.bf@Cache$ModelSyntax
+# "G =~ acips_q1_party_w1 + acips_q2_photos_w1 + acips_q4_joking_w1 + acips_q6_calltext_w1 + acips_q7_sharenews_w1 + acips_q8_interestgroup_w1 + acips_q10_vacation_w1 + acips_q11_inviteout_w1 + acips_q12_haventseen_w1 + acips_q13_groupevents_w1 + acips_q14_watchtv_w1 + acips_q15_makeplans_w1 + acips_q16_talkline_w1 + acips_q17_deepdiscuss_w1\nS1 =~ acips_q1_party_w1 + acips_q2_photos_w1 + acips_q4_joking_w1 + acips_q13_groupevents_w1 + acips_q16_talkline_w1\n"
+
+acips_mirt <- bfactor(acips_items[,-c(3,5,9)],c(1,1,1,rep(NA,6),1,NA,NA,1,NA))
+C2(acips_mirt)
+#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 123.626      72.000       0.000       0.049       0.034       0.063       0.039       0.988       0.990 
+acips_scores <- fscores(acips_mirt)
+
+dep_items <- df1[,grep("^phq9r_q.*_w3$|^odsis_.*_w3$",names(df1))]
+
+dep_ega <- nfactor.EGA(dep_items,uni.method="expand")
+
+dep_cfa <- CFA.1f(dep_items)
+
+sem.fit(dep_cfa) # BAD
+
+dep_specific <- dep_ega$dim.list
+dep_specific$PHQ <- 1:9
+
+dep_bifactor <- CFA.bf(dep_items,dep_specific)
+sem.fit(dep_bifactor)
+calcOmega(dep_bifactor,bifactor = T)
+loads(dep_bifactor)
+
+
+dep_bifactor@Cache$ModelSyntax
+# "G =~ phq9r_q1_anhedonia_w3 + phq9r_q2_depressed_w3 + phq9r_q3_sleep_w3 + phq9r_q4_energy_w3 + phq9r_q5_appetite_w3 + phq9r_q6_guilt_w3 + phq9r_q7_concentrate_w3 + phq9r_q8_psychomotor_w3 + phq9r_q9_suicide_w3 + odsis_q1_frequency_w3 + odsis_q2_severity_w3 + odsis_q3_interest_w3 + odsis_q4_interference_w3 + odsis_q5_social_w3\nF1 =~ phq9r_q2_depressed_w3 + phq9r_q6_guilt_w3 + phq9r_q9_suicide_w3 + odsis_q1_frequency_w3 + odsis_q2_severity_w3 + odsis_q3_interest_w3 + odsis_q4_interference_w3 + odsis_q5_social_w3\nF2 =~ phq9r_q1_anhedonia_w3 + phq9r_q3_sleep_w3 + phq9r_q4_energy_w3 + phq9r_q5_appetite_w3 + phq9r_q7_concentrate_w3 + phq9r_q8_psychomotor_w3\nPHQ =~ phq9r_q1_anhedonia_w3 + phq9r_q2_depressed_w3 + phq9r_q3_sleep_w3 + phq9r_q4_energy_w3 + phq9r_q5_appetite_w3 + phq9r_q6_guilt_w3 + phq9r_q7_concentrate_w3 + phq9r_q8_psychomotor_w3 + phq9r_q9_suicide_w3\n"
+
+dep_model <- mirt.model("
+           G = 1-14
+           AFF = 2,6,9,10-14
+           SOM = 1,3,4,5,7,8
+           PHQ = 1-9
+           ")
+
+dep_mirt <- mirt.2step(dep_items_w1,dep_model)
+C2(dep_mirt)
+
+
+loads(dep_mirt)
+
+
+# Adding factor scores to multiply imputed data:
+
+df_reduced_imp <- pblapply(df_reduced_imp,function(X){
+  X$SOCIAL_ACCESS_IRT_T1 <- social_scores[,1]
+  social_items_w2 <- X[,c("social_frequency","promis_dsa_q2_w2","promis_dsa_q5_w2","promis_dsa_q6_w2","pg10_q5_social_w2","pg10_q6_socialrole_w2","promis_emosup_q1_w2","promis_emosup_q2_w2","promis_emosup_q3_w2","promis_emosup_q4_w2","promis_lonely_q2_w2","promis_lonely_q3_w2","promis_lonely_q4_w2","promis_lonely_q5_w2","promis_lonely_q6_w2")] %>% mutate(across(everything(),as.numeric))
+  social_items_w3 <- X[,c("social_frequency","promis_dsa_q2_w3","promis_dsa_q5_w3","promis_dsa_q6_w3","pg10_q5_social_w3","pg10_q6_socialrole_w3","promis_emosup_q1_w3","promis_emosup_q2_w3","promis_emosup_q3_w3","promis_emosup_q4_w3","promis_lonely_q2_w3","promis_lonely_q3_w3","promis_lonely_q4_w3","promis_lonely_q5_w3","promis_lonely_q6_w3")] %>% mutate(across(everything(),as.numeric))
+  social_scores_w2 <- fscores(social_mirt_bf,QMC=T,response.pattern = social_items_w2)
+  social_scores_w3 <- fscores(social_mirt_bf,QMC=T,response.pattern = social_items_w3)
+  X$SOCIAL_ACCESS_IRT_T2 <- social_scores_w2[,1]
+  X$SOCIAL_ACCESS_IRT_T3 <- social_scores_w3[,1]
+  X$ACIPS_IRT_T1 <- acips_scores[,1]
+  acips_items_w2 <- X[,grep("^acips_.*_w2$",names(X))] %>% mutate(across(everything(),as.numeric))
+  acips_items_w3 <- X[,grep("^acips_.*_w3$",names(X))] %>% mutate(across(everything(),as.numeric))
+  acips_scores_w2 <- fscores(acips_mirt,response.pattern = acips_items_w2[,-c(3,5,9)])
+  acips_scores_w3 <- fscores(acips_mirt,response.pattern = acips_items_w3[,-c(3,5,9)])
+  X$ACIPS_IRT_T2 <- acips_scores_w2[,1]
+  X$ACIPS_IRT_T3 <- acips_scores_w3[,1]
+  solo_items <- X[,grep("^solo_.*_w2$",names(X))] %>% mutate(across(everything(),as.numeric))
+  solo_items_w3 <- X[,grep("^solo_.*_w3$",names(X))] %>% mutate(across(everything(),as.numeric))
+  solo_scores <- fscores(solo_mirt_w1,QMC=T,response.pattern = solo_items[,-c(2,6,7)])
+  solo_scores_w3 <- fscores(solo_mirt_w1,QMC=T,response.pattern = solo_items_w3[,-c(2,6,7)])
+  solo_scores_w1 <- fscores(solo_mirt_w1,QMC=T)
+  X$SOLO_IRT_T1 <- solo_scores[,1]
+  X$SOLO_IRT_T2 <- solo_scores_w1[,1]
+  X$SOLO_IRT_T3 <- solo_scores_w3[,1]
+  dep_items <- X[,grep("^phq9r_q.*_w3$|^odsis_.*_w3$",names(X))] %>% mutate(across(everything(),as.numeric))
+  dep_items_w1 <- X[,grep("^phq9r_q.*_w1$|^odsis_.*_w1$",names(X))] %>% mutate(across(everything(),as.numeric))
+  dep_items_w2 <- X[,grep("^phq9r_q.*_w2$|^odsis_.*_w2$",names(X))] %>% mutate(across(everything(),as.numeric))
+  dep_scores <- fscores(dep_mirt,QMC=T,response.pattern = dep_items)
+  dep_scores_w1 <- fscores(dep_mirt,QMC=T,response.pattern = dep_items_w1)
+  dep_scores_w2 <- fscores(dep_mirt,QMC=T,response.pattern = dep_items_w2)
+  X$DEP_IRT_T1 <- dep_scores_w1[,1]
+  X$DEP_IRT_T2 <- dep_scores_w2[,1]
+  X$DEP_IRT_T3 <- dep_scores[,1]
+  return(X)
+})
+```
+
+
+# Playing around with item-level measurement models
+
+```{r}
+# Measurement
+
+### Social Access/Quality Composite (PROMIS Items)
+social_items <- df[,c("social_frequency","promis_dsa_q2_w1","promis_dsa_q5_w1","promis_dsa_q6_w1","pg10_q5_social_w1","pg10_q6_socialrole_w1","promis_emosup_q1_w1","promis_emosup_q2_w1","promis_emosup_q3_w1","promis_emosup_q4_w1","promis_lonely_q2_w1","promis_lonely_q3_w1","promis_lonely_q4_w1","promis_lonely_q5_w1","promis_lonely_q6_w1")]
+
+social_items[,11:15] <- 6-apply(social_items[,11:15],2,as.numeric)
+
+names(social_items)
+
+nfactor.EGA(social_items)
+
+# promis_dsa_q5_w1|promis_dsa_q6_w1 promis_emosup_q1_w1|promis_emosup_q2_w1 promis_emosup_q2_w1|promis_emosup_q4_w1 promis_emosup_q3_w1|promis_emosup_q4_w1 
+#                             0.452                                   0.431                                   0.305                                   0.302 
+
+social.bf <- CFA.bf(social_items,c(NA,rep(1,5),rep(2,4),rep(3,5)),more = '
+                    promis_dsa_q5_w1 ~~ promis_dsa_q6_w1
+                    promis_emosup_q1_w1 ~~ promis_emosup_q2_w1
+                    ')
+
+sem.fit(social.bf)
+# Fit Measures for social.bf (DWLS estimation):
+#  Scaled X2(74) = 104.72 P = 0.0109
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.985 | 'old' CFI = 0.999
+#   TLI.cMLD = 0.979 | 'old' TLI = 0.998
+#   RMSEA.cMLD = 0.055 (90% CI: 0.032—0.075) | 'old' RMSEA = 0.037 (90% CI: 0.018—0.053)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.017 (90% CI: 0.009—0.024) | 'old' SRMR = 0.027 (90% CI: 0.022—0.032)
+#   uCRMR = 0.018 (90% CI: 0.01—0.026) | 'old' CRMR = 0.029 (90% CI: 0.024—0.034)
+#  uSRMR/R^2 = 0.024 (90% CI: 0.013—0.035)
+#  WRMR = 0.489
+#  |Residuals| > 0.1 = 0%
+#  Largest Residual = -0.078 (pg10_q6_socialrole_w1|promis_dsa_q6_w1)
+
+loads(social.bf)
+
+calcOmega(social.bf,bifactor=T)
+#              G    S1    S2    S3
+# Omega.S  0.945 0.846 0.933 0.902
+# Omega.HS 0.809 0.244 0.436 0.257
+# ECV_GS   0.650 0.707 0.513 0.713
+# ECV_SS      NA 0.293 0.487 0.287
+# VAR.pred    NA 1.051 1.346 1.102
+
+
+solo_items <- df[,grep("^solo_.*_w1$",names(df))]
+
+nfactor.EGA(solo_items)
+
+### SOLO (Loneliness)
+solo_bf_mirt <- bfactor(solo_items,c(1,2,1,1,2,1,1,2,1,1,2,1,2))
+C2(solo_bf_mirt)
+#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 116.208      52.000       0.000       0.064       0.048       0.079       0.051       0.979       0.986 
+residCheck(solo_bf_mirt)
+# solo_q2r_happyconnectedness_w1|solo_q7_wishwithothers_w1       solo_q4_lonwithothers_w1|solo_q5r_satnumfriends_w1               solo_q6_leftout_w1|solo_q11r_satinclude_w1 
+#                                                   -0.134                                                   -0.100                                                    0.100 
+#           solo_q7_wishwithothers_w1|solo_q13r_quality_w1 
+#                                                   -0.152 
+LD.Q3.boot(solo_bf_mirt)
+# $Large.Q3s
+# solo_q6_leftout_w1|solo_q11r_satinclude_w1 
+#                                      0.279 
+# 
+# $Cutoff
+#   95% 
+# 0.192 
+
+# Now cutting items 6,7
+
+solo_bf_mirt <- bfactor(solo_items[,-c(6,7)],c(1,2,1,1,2,2,1,1,2,1,2))
+C2(solo_bf_mirt)
+#     C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 53.445      33.000       0.014       0.045       0.021       0.067       0.044       0.990       0.994 
+residCheck(solo_bf_mirt) # Good
+LD.Q3.boot(solo_bf_mirt) # Good
+
+solo.bf <- CFA.bf(solo_items[,-c(6,7)],c(1,2,1,1,2,2,1,1,2,1,2))
+
+sem.fit(solo.bf)
+# Fit Measures for solo.bf (DWLS estimation):
+#  Scaled X2(33) = 101.94 P = 5.81e-09
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.976 | 'old' CFI = 0.982
+#   TLI.cMLD = 0.96 | 'old' TLI = 0.97
+#   RMSEA.cMLD = 0.068 (90% CI: 0.051—0.085) | 'old' RMSEA = 0.083 (90% CI: 0.065—0.102)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.026 (90% CI: 0.02—0.033) | 'old' SRMR = 0.031 (90% CI: 0.027—0.035)
+#   uCRMR = 0.029 (90% CI: 0.022—0.036) | 'old' CRMR = 0.034 (90% CI: 0.029—0.038)
+#  uSRMR/R^2 = 0.042 (90% CI: 0.032—0.051)
+#  WRMR = 0.565
+#  |Residuals| > 0.1 = 1.8%
+#  Largest Residual = -0.106 (solo_q5r_satnumfriends_w1|solo_q4_lonwithothers_w1)
+sem.misspec(solo.bf)$Covariances.pow
+
+# Note in wave 2, item 2 (connected to community) was demonstrating misfit - removed to address issues here
+solo.bf <- CFA.bf(solo_items[,-c(2,6,7)],c(1,1,1,2,2,1,1,2,1,2))
+sem.fit(solo.bf)
+# Fit Measures for solo.bf (DWLS estimation):
+#  Scaled X2(25) = 77.04 P = 3.3e-07
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.979 | 'old' CFI = 0.984
+#   TLI.cMLD = 0.963 | 'old' TLI = 0.971
+#   RMSEA.cMLD = 0.068 (90% CI: 0.048—0.088) | 'old' RMSEA = 0.083 (90% CI: 0.062—0.104)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.025 (90% CI: 0.017—0.032) | 'old' SRMR = 0.029 (90% CI: 0.025—0.034)
+#   uCRMR = 0.028 (90% CI: 0.019—0.036) | 'old' CRMR = 0.032 (90% CI: 0.027—0.037)
+#  uSRMR/R^2 = 0.039 (90% CI: 0.027—0.051)
+#  WRMR = 0.525
+#  |Residuals| > 0.1 = 0%
+#  Largest Residual = -0.083 (solo_q13r_quality_w1|solo_q12_shareinterests_w1)
+
+calcOmega(solo.bf,bifactor = T) # This did increase OmegaH
+# Omega Coefficients:
+#              G    S1    S2
+# Omega.S  0.918 0.871 0.856
+# Omega.HS 0.836 0.007 0.346
+# ECV_GS   0.716 0.798 0.597
+# ECV_SS      NA 0.202 0.403
+# VAR.pred    NA 1.025 1.158
+
+
+### ACIPS (Social Motivation)
+acips_items <- df[,grep("^acips_.*_w1$",names(df))]
+
+nfactor.EGA(acips_items,uni.method="expand") # Essentialy unidimensional
+
+
+acips_mirt <- mirt(acips_items,1)
+C2(acips_mirt) # Fit is pretty good too (SRMR a little high but OK)
+#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 305.297     119.000       0.000       0.072       0.062       0.082       0.055       0.970       0.974 
+
+residCheck(acips_mirt)
+# $Large.Resids
+#   acips_q1_party_w1|acips_q3r_familygather_w1  acips_q2_photos_w1|acips_q3r_familygather_w1     acips_q2_photos_w1|acips_q9_watchmovie_w1     acips_q2_photos_w1|acips_q11_inviteout_w1 
+#                                         0.119                                         0.113                                         0.157                                        -0.105 
+# acips_q5_goodmeal_w1|acips_q13_groupevents_w1   acips_q5_goodmeal_w1|acips_q15_makeplans_w1   acips_q9_watchmovie_w1|acips_q14_watchtv_w1 
+#                                        -0.114                                        -0.127                                         0.124 
+# $N.Large.Resids
+#        acips_q2_photos_w1 acips_q3r_familygather_w1      acips_q5_goodmeal_w1    acips_q9_watchmovie_w1 
+#                         3                         2                         2                         2 
+#
+LD.Q3.boot(acips_mirt) # Cutoff 0.203
+# acips_q1_party_w1|acips_q3r_familygather_w1   acips_q2_photos_w1|acips_q9_watchmovie_w1 
+#                                       0.203                                       0.226 
+# Remove items 3, 5, 9
+
+
+acips_mirt <- mirt(acips_items[,-c(3,5,9)],1)
+C2(acips_mirt)
+#      C2          df           p    RMSEA.C2  RMSEA_5.C2 RMSEA_95.C2     SRMR.C2      TLI.C2      CFI.C2 
+# 170.484      77.000       0.000       0.063       0.050       0.076       0.047       0.979       0.983 
+residCheck(acips_mirt) # No more large resids
+LD.Q3.boot(acips_mirt) # None
+
+calcOmega(acips_mirt) # 0.943
+
+
+# Depression Composite (PHQ, ODSIS)
+
+names(df)
+df[which(df$odsis_q1_frequency_w1==0),grep("odsis_q[2345].*_w1$",names(df))] <- 0
+dep_items <- df[,grep("^phq9r_q.*_w3$|^odsis_.*_w3$",names(df))] %>% mutate(across(everything(),as.numeric))
+dep_items_w1 <- df[,grep("^phq9r_q.*_w1$|^odsis_.*_w1$",names(df))] %>% mutate(across(everything(),as.numeric))
+
+
+dep_ega <- nfactor.EGA(dep_items,uni.method="expand")
+
+dep_specific <- dep_ega$dim.list
+dep_specific$PHQ <- 1:9
+dep_specific$F3 <- NULL
+
+
+dep_bifactor <- CFA.bf(dep_items,dep_specific)
+sem.fit(dep_bifactor)
+# Fit Measures for dep_bifactor (DWLS estimation):
+#  Scaled X2(57) = 87.83 P = 0.00543
+#  Unbiased Categorical Fit Indices (Savalei, 2020):
+#   CFI.cMLD = 0.985 | 'old' CFI = 0.998
+#   TLI.cMLD = 0.975 | 'old' TLI = 0.998
+#   RMSEA.cMLD = 0.067 (90% CI: 0.033—0.097) | 'old' RMSEA = 0.042 (90% CI: 0.023—0.059)
+#  Unbiased SRMR/CRMR (Maydeu-Olivares, 2017; Shi et al., 2020)
+#   uSRMR = 0.011 (90% CI: 0.004—0.017) | 'old' SRMR = 0.021 (90% CI: 0.016—0.025)
+#   uCRMR = 0.011 (90% CI: 0.004—0.019) | 'old' CRMR = 0.022 (90% CI: 0.018—0.027)
+#  uSRMR/R^2 = 0.014 (90% CI: 0.005—0.022)
+#  WRMR = 0.419
+#  |Residuals| > 0.1 = 0%
+#  Largest Residual = 0.064 (odsis_q4_interference_w1|phq9r_q8_psychomotor_w1)
+
+residCheck(dep_bifactor) # None
+sem.misspec(dep_bifactor)$Covariances.pow # None
+
+calcOmega(dep_bifactor,bifactor = T)
+#              G    F1    F2   PHQ
+# Omega.S  0.960 0.752 0.913 0.780
+# Omega.HS 0.817 0.213 0.151 0.121
+# ECV_GS   0.752 0.552 0.772 0.608
+# ECV_SS      NA 0.284 0.169 0.141
+# VAR.pred    NA 0.943 1.062 0.920
+
+```
+
+
+
+# Bayesian (Moderated) Mediation Model in brms **(ROBYN START HERE)**
+
+## Part 1: Model Fitting
+Model: Social Access [T1] -> Loneliness [T2] - > Depression [T3] [with paths moderated by social motivation @ T1]
+
+```{r}
+# Full Moderated Mediation Model (All 3 Paths Moderated)
+bf_modmed_full <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+
+# Priors: Standard Normal distribution on slopes; exponential(1) distribution on sigma parameter; also default brms prior  used for intercepts [t(df = 3, mean = median, sd = 2.5)] and nu [t-distribution df parameter - prior is gamma(2, 0.1) with lower-bound of 1]. Priors the same for all models
+prior_modmed <- c(brms::prior(normal(0,1), class = b),brms::prior(exponential(1),class = sigma,resp=SOLOIRTT2),brms::prior(exponential(1),class = sigma,resp=DEPIRTT3))
+
+# Full Model
+brm_socacc_depress_modmed_full <- brm_mi(bf_modmed_full,
+                                         data=df_reduced_imp,
+                                         prior= prior_modmed,
+                                         cores=10,
+                                         chains=10,
+                                         seed=123,sample_prior = T,
+                                         iter=5000,warmup=1000,
+                                         file = "brm_socacc_depress_modmed_full.RDS")
+
+
+# Partial Moderated Mediation Model (Only X -> M Path Moderated)
+bf_modmed_XM <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# XM Model
+brm_socacc_depress_modmed_XM <- brm_mi(bf_modmed_XM,
+                                       data=df_reduced_imp,
+                                       prior= prior_modmed,
+                                       cores=10,
+                                       chains=10,
+                                       seed=123,sample_prior = T,
+                                       iter=5000,warmup=1000,
+                                       file = "brm_socacc_depress_modmed_XM.RDS")
+
+
+# Partial Moderated Mediation Model (Only M -> Y Path Moderated)
+bf_modmed_MY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# MY Model
+brm_socacc_depress_modmed_MY <- brm_mi(bf_modmed_MY,
+                                       data=df_reduced_imp,
+                                       prior= prior_modmed,
+                                       cores=10,
+                                       chains=10,
+                                       seed=123,sample_prior = T,
+                                       iter=5000,warmup=1000,
+                                       file = "brm_socacc_depress_modmed_MY.RDS")
+
+# Partial Moderated Mediation Model (Only X -> Y Path Moderated)
+bf_modmed_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# XY Model
+brm_socacc_depress_modmed_XY <- brm_mi(bf_modmed_XY,
+                                       data=df_reduced_imp,
+                                       prior= prior_modmed,
+                                       cores=10,
+                                       chains=10,
+                                       seed=123,sample_prior = T,
+                                       iter=5000,warmup=1000,
+                                       file = "brm_socacc_depress_modmed_XY.RDS")
+
+# Partial Moderated Mediation Model (Only M -> Y  and X -> Y Paths Moderated)
+bf_modmed_MY_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# MY/XY Model
+brm_socacc_depress_modmed_MY_XY <- brm_mi(bf_modmed_MY_XY,
+                                          data=df_reduced_imp,
+                                          prior= prior_modmed,
+                                          cores=10,
+                                          chains=10,
+                                          seed=123,sample_prior = T,
+                                          iter=5000,warmup=1000,
+                                          file = "brm_socacc_depress_modmed_MY_XY.RDS")
+
+
+# Partial Moderated Mediation Model (Only X -> M and X -> Y Paths Moderated)
+bf_modmed_XM_XY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 * SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# XM/XY Model
+brm_socacc_depress_modmed_XM_XY <- brm_mi(bf_modmed_XM_XY,
+                                          data=df_reduced_imp,
+                                          prior= prior_modmed,
+                                          cores=10,
+                                          chains=10,
+                                          seed=123,sample_prior = T,
+                                          iter=5000,warmup=1000,
+                                          file = "brm_socacc_depress_modmed_XM_XY.RDS")
+
+# Partial Moderated Mediation Model (Only X -> M and M -> Y Paths Moderated)
+bf_modmed_XM_MY <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# XM/MY Model
+brm_socacc_depress_modmed_XM_MY <- brm_mi(bf_modmed_XM_MY,
+                                          data=df_reduced_imp,
+                                          prior= prior_modmed,
+                                          cores=10,
+                                          chains=10,
+                                          seed=123,sample_prior = T,
+                                          iter=5000,warmup=1000,
+                                          file = "brm_socacc_depress_modmed_XM_MY.RDS")
+
+# UNModerated Mediation Model (NO Paths Moderated)
+bf_med_bl <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 + ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
+  bf(DEP_IRT_T3 ~ SOLO_IRT_T2 + ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
+# XM/MY Model
+brm_socacc_depress_med_bl <- brm_mi(bf_med_bl,
+                                    data=df_reduced_imp,
+                                    prior= prior_modmed,
+                                    cores=10,
+                                    chains=10,
+                                    seed=123,sample_prior = T,
+                                    iter=5000,warmup=1000,
+                                    file = "brm_socacc_depress_med_bl.RDS")
+```
+
+## Part 2: Model Selection
+
+```{r}
+modlist <- list("None"=brm_socacc_depress_med_bl,
+                "XM_MY_XY"=brm_socacc_depress_modmed_full,
+                "MY_XY"=brm_socacc_depress_modmed_MY_XY,
+                "XM_XY"=brm_socacc_depress_modmed_XM_XY,
+                "XM_MY"=brm_socacc_depress_modmed_XM_MY,
+                "XY"=brm_socacc_depress_modmed_XY,
+                "XM"=brm_socacc_depress_modmed_XM,
+                "MY"=brm_socacc_depress_modmed_MY)
+
+bayes_factor_BMA(modlist) # Compare to equal priors [default]
+
+# ENTER YOUR OWN PRIORS in the c() [8 values, separated by commas]
+# Values for prior_prob in order are None, XM_MY_XY, MY_XY, XM_XY, XM_MY, XY, XM, MY
+bayes_factor_BMA(modlist, prior_prob = c()) 
+
+# See example below [Values in there right now are Zack's "informed" priors but feel free to change]
+bayes_factor_BMA(modlist,prior_prob = c(0.25,0.10,0.05,0.05,0.15,0.05,0.30,0.05)) # Alternative "informed" model selection
+```
+
+## Part 3: Results of "Best-fitting" Model
+
+```{r}
+# Get draws using posterior package
+post_modmed_final <- as_draws_df(brm_socacc_depress_modmed_XM)
+
+# Calculate the variables you need from the mediation (some are already there [just being renamed])
+post_modmed_final$A1_SOC_LONELINESS <- post_modmed_final$b_SOLOIRTT2_SOCIAL_ACCESS_IRT_T1 # This is a regression slope, just being renamed
+post_modmed_final$A2_ACIPS_LONELINESS <- post_modmed_final$b_SOLOIRTT2_ACIPS_IRT_T1 # This is a regression slope, just being renamed
+post_modmed_final$A3_SOCxACIPS_LONELINESS <- post_modmed_final$`b_SOLOIRTT2_SOCIAL_ACCESS_IRT_T1:ACIPS_IRT_T1` # This is a regression interaction, just being renamed
+post_modmed_final$B1_LONELINESS_DEPRESSION <- post_modmed_final$b_DEPIRTT3_SOLO_IRT_T2 # This is a regression slope, just being renamed
+post_modmed_final$B2_ACIPS_DEPRESSION <- post_modmed_final$b_DEPIRTT3_ACIPS_IRT_T1 # This is a regression slope, just being renamed
+post_modmed_final$DIRECT_EFFECT <- post_modmed_final$b_DEPIRTT3_SOCIAL_ACCESS_IRT_T1 # This is a regression slope, just being renamed
+post_modmed_final$INDIRECT_EFFECT <- post_modmed_final$b_SOLOIRTT2_SOCIAL_ACCESS_IRT_T1 * post_modmed_final$b_DEPIRTT3_SOLO_IRT_T2 # This is two regression slopes multiplied together
+post_modmed_final$INDEX_MODERATED_MEDIATION <- post_modmed_final$`b_SOLOIRTT2_SOCIAL_ACCESS_IRT_T1:ACIPS_IRT_T1` * post_modmed_final$b_DEPIRTT3_SOLO_IRT_T2 # This is a regression slope multiplied by an interaction term
+post_modmed_final$CONDITIONAL_INDIRECT_HIGHACIPS <- post_modmed_final$INDIRECT_EFFECT + post_modmed_final$INDEX_MODERATED_MEDIATION * 0.5 # This is a *conditional* indirect effect for people whose ACIPS score is 0.5 SD above the mean
+post_modmed_final$CONDITIONAL_INDIRECT_LOWACIPS <- post_modmed_final$INDIRECT_EFFECT + post_modmed_final$INDEX_MODERATED_MEDIATION * -0.5 # This is a *conditional* indirect effect for people whose ACIPS score is 0.5 SD below the mean
+post_modmed_final$CONDITIONAL_INDIRECT_V_HIGHACIPS <- post_modmed_final$INDIRECT_EFFECT + post_modmed_final$INDEX_MODERATED_MEDIATION # This is a *conditional* indirect effect for people whose ACIPS score is 1 SD above the mean
+post_modmed_final$CONDITIONAL_INDIRECT_V_LOWACIPS <- post_modmed_final$INDIRECT_EFFECT - post_modmed_final$INDEX_MODERATED_MEDIATION # This is a *conditional* indirect effect for people whose ACIPS score is 1 SD below the mean
+post_modmed_final$TOTAL_EFFECT <- post_modmed_final$DIRECT_EFFECT + post_modmed_final$INDIRECT_EFFECT # This is the total effect of X on Y (including the part mediated by M) [conditional total effects can also be calculated if interested, but I did't do that]
+post_modmed_final$PROPORTION_MEDIATED <- post_modmed_final$INDIRECT_EFFECT/post_modmed_final$TOTAL_EFFECT # This is the proportion of the total effect that's made up by the indirect effect (how much is actually "mediated"); I made the (sort of arbitrary) judgment that 50% mediated is "a lot of mediation", since it would be "more indirect than direct" and we could test how probable that hypothesis is. 
+
+# These are samples of the different priors (from the model) used to calculate Bayes factors
+post_modmed_final$PRIOR_DIRECT <- post_modmed_final$prior_b_DEPIRTT3 
+post_modmed_final$PRIOR_INDIRECT <- post_modmed_final$prior_b_DEPIRTT3 * post_modmed_final$prior_b_SOLOIRTT2
+post_modmed_final$PRIOR_TOTAL <- post_modmed_final$prior_b_DEPIRTT3 + post_modmed_final$prior_b_DEPIRTT3 * post_modmed_final$prior_b_SOLOIRTT2
+post_modmed_final$PRIOR_MODMED <- sample(post_modmed_final$prior_b_DEPIRTT3) * post_modmed_final$prior_b_DEPIRTT3 * post_modmed_final$prior_b_SOLOIRTT2
+
+# This is just some calculation of the different Bayesian indices; no need to understand exactly what I'm doing here beyond going through the posterior and choosing which indices are matched with which interval hypotheses (then printing out the data nicely)
+post_modmed_final <- post_modmed_final[,25:45] 
+post_summary <- pbsapply(1:14,function(i){
+  X <- suppressWarnings(unname(unlist(post_modmed_final[,3+i])))
+  if(i %in% c(1,2,4,5,6)){ # Direct effects
+    post_summ(X,ROPE = c(-0.1,0.1),prior = post_modmed_final$PRIOR_DIRECT)[-c(1:3)]
+  } else if(i %in% c(3,7)){ # Indirect effects
+    post_summ(X,ROPE = c(-0.05,0.05),prior = post_modmed_final$PRIOR_INDIRECT)[-c(1:3)]
+  } else if(i == 8){ # Index of moderated mediation
+    post_summ(X,ROPE = c(-0.025,0.025),prior = post_modmed_final$PRIOR_MODMED)[-c(1:3)]
+  } else if(i %in% 9:12){ # Conditional indirect effects [same as indirect effects but with no Bayes factor]
+    post_summ(X,ROPE = c(-0.05,0.05),prior = NULL)[-c(1:3)]
+  } else if(i == 13){ # Total Effect
+    post_summ(X,ROPE = c(-0.1,0.1),prior = post_modmed_final$PRIOR_TOTAL)[-c(1:3)]
+  } else if(i == 14){ # Proportion Mediated
+    post_summ(X,ROPE = c(-Inf,0.5),prior = NULL)[-c(1:3)]
+  }
+},cl=15)
+
+
+colnames(post_summary) <- names(post_modmed_final)[4:17]
+post_summary <- data.frame(t(post_summary))
+
+post_summary <- post_summary %>% mutate(across(Mdn:HDI.97.5.,round,3),
+                                        across(c(Pd,P.ROPE,P.ROPE.1),round,4),
+                                        P.Exceeds.ROPE=P.ROPE.1,
+                                        ROPE = glue::glue("[{ROPE.lo},{ROPE.hi}]"),
+                                        BF.0 = format(exp(logBF.10),digits=3),
+                                        BF.ROPE = format(exp(logBF.ROPE),digits=3))
+
+post_summary[,c(1:4,14,13,9,12,15)] # Print Results
+```
+
+
+### Additional analyses [TBD...]
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
