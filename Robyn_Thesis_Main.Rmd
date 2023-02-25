@@ -1,3 +1,5 @@
+
+
 ---
 title: "Robyn Thesis Moderated Mediation Analysis"
 author: "Robyn Himelstein & Zack Williams"
@@ -6,7 +8,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(include = FALSE)
 source("rogme_extra.R") # Note you need to change the path to wherever these scripts are on your machine
 source("FA.functions.R") # Note you need to change the path to wherever these scripts are on your machine
 source("irt_extra.R") # Note you need to change the path to wherever these scripts are on your machine
@@ -34,7 +36,7 @@ df1 <- df_reduced_imp[[1]]
 
 # Measure Calculation
 
-```{r}
+```{r include=FALSE}
 # Note that you can skip this section if you want to go to mediation results
 social_items <- df1[,c("social_frequency","promis_dsa_q2_w1","promis_dsa_q5_w1","promis_dsa_q6_w1","pg10_q5_social_w1","pg10_q6_socialrole_w1","promis_emosup_q1_w1","promis_emosup_q2_w1","promis_emosup_q3_w1","promis_emosup_q4_w1","promis_lonely_q2_w1","promis_lonely_q3_w1","promis_lonely_q4_w1","promis_lonely_q5_w1","promis_lonely_q6_w1")] %>% mutate(across(everything(),as.numeric))
 
@@ -198,7 +200,7 @@ df_reduced_imp <- pblapply(df_reduced_imp,function(X){
 
 # Playing around with item-level measurement models
 
-```{r}
+```{r include=FALSE}
 # Measurement
 
 ### Social Access/Quality Composite (PROMIS Items)
@@ -409,8 +411,7 @@ calcOmega(dep_bifactor,bifactor = T)
 ## Part 1: Model Fitting
 Model: Social Access [T1] -> Loneliness [T2] - > Depression [T3] [with paths moderated by social motivation @ T1]
 
-```{r}
-install_cmdstan()
+```{r include=FALSE}
 # Full Moderated Mediation Model (All 3 Paths Moderated)
 bf_modmed_full <- bf(SOLO_IRT_T2 ~ SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + 
   bf(DEP_IRT_T3 ~ SOLO_IRT_T2 * ACIPS_IRT_T1 + SOCIAL_ACCESS_IRT_T1 * ACIPS_IRT_T1,family=student(link_sigma = "identity")) + set_rescor(FALSE)
@@ -525,7 +526,7 @@ brm_socacc_depress_med_bl <- brm_mi(bf_med_bl,
 
 ## Part 2: Model Selection
 
-```{r}
+```{r include=FALSE}
 modlist <- list("None"=brm_socacc_depress_med_bl,
      "XM_MY_XY"=brm_socacc_depress_modmed_full,
      "MY_XY"=brm_socacc_depress_modmed_MY_XY,
@@ -539,15 +540,45 @@ bayes_factor_BMA(modlist) # Compare to equal priors [default]
 
 # ENTER YOUR OWN PRIORS in the c() [8 values, separated by commas]
 # Values for prior_prob in order are None, XM_MY_XY, MY_XY, XM_XY, XM_MY, XY, XM, MY
-bayes_factor_BMA(modlist, prior_prob = c()) 
+bayes_factor_BMA(modlist, prior_prob = c(0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125)) 
+##BL/ ACI: SOL has a BF.BL=1.89;; BF model=7.344; BF.inclusion= 1.890
+bayes_factor_BMA(modlist, prior_prob = c(0.25,0.10,0.05,0.05,0.15,0.05,0.30,0.05))
+#BL/ ACI: SOL has a BF.BL=1.89; BF.model= 4.18; BF.inclusion=1.57
+bayes_factor_BMA(modlist, prior_prob = c(0.2,0.05,0.05,0.05,0.1,0.05,0.45,0.05)) 
+#BL/ ACI: SOL has a BF.BL=1.89;BF.model= 4.11; BF.inclusion=2.24 
+bayes_factor_BMA(modlist, prior_prob = c(0.105,0.105,0.105,0.105,0.105,0.105,0.265,0.105))
+#BL/ACI:SOL has a BF.BL= 1.89; BF.model= 7.3309; BF.inclusion= 3.0000
+bayes_factor_BMA(modlist, prior_prob = c(0.105,0.05, 0.105,0.105,0.105,0.105,0.32,0.105))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 6.82014; BF.inclusion= 3.560
+bayes_factor_BMA(modlist, prior_prob = c(0.105, 0.01,0.105,0.105,0.105,0.105,0.36,0.105))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 6.451; BF.inclusion= 3.960
+bayes_factor_BMA(modlist, prior_prob = c(0.32, 0.03,0.03,0.03,0.03,0.03,0.50,0.03))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 2.75; BF.inclusion= 2.0400
+bayes_factor_BMA(modlist, prior_prob = c(0.2, 0.1,0.1,0.1,0.1,0.1,0.20,0.1))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 5.39; BF.inclusion= 1.89
+bayes_factor_BMA(modlist, prior_prob = c(0.2, 0.05,0.05,0.05,0.05,0.05,0.50,0.05))
+#BL/ACI: SOL has a BFBL=1.89; BF.model= 3.93; BF.inclusion= 2.45
+bayes_factor_BMA(modlist, prior_prob = c(0.3, 0.05,0.05,0.05,0.05,0.05,0.40,0.05))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 3.33; BF.inclusion= 2.04
+bayes_factor_BMA(modlist, prior_prob = c(0.1, 0.05,0.05,0.05,0.05,0.05,0.60,0.05))
+#BL/ACI: SOL has a BF.BL-1.89; BF.model= 5.39; BF.inclusion= 3.40
+bayes_factor_BMA(modlist, prior_prob = c(0.17,0.105,0.105,0.105,0.105,0.105,0.20,0.105))
+#BL/ACI: SOL has a BF.BL=1.89; BF.model= 5.94; BF.inclusion= 2.05
+bayes_factor_BMA(modlist, prior_prob = c(0.1,0.1,0.1,0.1,0.1,0.1,0.3,0.1))
+#BL/ACI:SOL has a BF.BL=1.89; BF.model= 7.33 BF.inclusion= 3.23
+bayes_factor_BMA(modlist, prior_prob = c(0.15,0.1,0.1,0.1,0.1,0.1,0.25,0.1))
+#BL/ACI:SOL has BF.BL=1.89; BF.model= 6.15 BF.inclusion= 2.42
+
+
+
 
 # See example below [Values in there right now are Zack's "informed" priors but feel free to change]
-bayes_factor_BMA(modlist,prior_prob = c(0.25,0.10,0.05,0.05,0.15,0.05,0.30,0.05)) # Alternative "informed" model selection
+#bayes_factor_BMA(modlist,prior_prob = c(0.25,0.10,0.05,0.05,0.15,0.05,0.30,0.05)) # Alternative "informed" model selection
 ```
 
 ## Part 3: Results of "Best-fitting" Model
 
-```{r}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 # Get draws using posterior package
 post_modmed_final <- as_draws_df(brm_socacc_depress_modmed_XM)
 
@@ -612,6 +643,7 @@ post_summary[,c(1:4,14,13,9,12,15)] # Print Results
 ```{r}
 
 ```
+
 
 
 
